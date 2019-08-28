@@ -4,7 +4,7 @@ close all
 
 global L N W
 L = 100; %Max size of generated boxes
-N = 200; %Number of generated boxes
+N = 20; %Number of generated boxes
 W = 1000; %Width of truck
 
 schedule = 0.99; %Proportion of new temp to old one
@@ -18,11 +18,12 @@ plot = 0;
 
 
 startingD = V; %Stating temp
-index = 1;
 
-for index = 1:1000
+
+for index = 1:100
     boxes = boxes(:,:,end); %Every new itteration delete previous paths from structure
     Ea = volume(boxes(:,:,end),plot); %Get the energy of the current path
+    plot = 0;
     Eai = Ea; %Also save as initial energy
     rate = []; %Initialize rate array
     equilib = 0; %Initialize terminator variable
@@ -47,9 +48,9 @@ for index = 1:1000
     end
     
     %Plotting
-    %Only plot every 200th temperature (adjust for lowere schedules
-    if mod(index,100)==0
-        plot = 1;
+    %Only plot every 10th temperature (adjust for lowere schedules
+    if mod(index,10)==0
+        plot = (index/10)+1;
     else
         plot = 0;
     end
@@ -64,44 +65,31 @@ fprintf('The ending distance is %.4f\n',Ea)
 
 %Get the energy by finding the distance between all the points
 function Ea = volume(boxes,plot)
-    if plot
-        figure()
+    if plot~=0
+        figure(plot)
     end
-        global W L N
-        Truck = zeros(W,L*N);
+        global W
+        Truck = zeros(W,W);
         position = [1,1];
         for i = 1:size(boxes,1)
-            if (position(1)+boxes(i,1)) <= W
-                [~,n] = find(Truck(position(1):position(1)+boxes(i,1),:));
-                if isempty(n)
-                    position(2) = 1;
-                else
-                    position(2) = max(n)+1;
-                end
-
-                Truck(position(1):position(1)+boxes(i,1),position(2):position(2)+boxes(i,2)) = Truck(position(1):position(1)+boxes(i,1),position(2):position(2)+boxes(i,2)) + 1;
-                if plot
-                    rectangle('Position',[position(1)-1 position(2)-1 boxes(i,1)+1 boxes(i,2)+1],'Curvature',0.1)
-                end
-    %             imagesc(Truck)
-                position(1) = position(1) + boxes(i,1)+1;
-
-            else
+            if (position(1)+boxes(i,1)) > W
                 position(1) = 1;
-                [~,n] = find(Truck(position(1):position(1)+boxes(i,1),:));
-                if isempty(n)
-                    position(2) = 1;
-                else
-                    position(2) = max(n)+1;
-                end
-                Truck(position(1):position(1)+boxes(i,1),position(2):position(2)+boxes(i,2)) = Truck(position(1):position(1)+boxes(i,1),position(2):position(2)+boxes(i,2)) + 1;
-                if plot
-                    rectangle('Position',[position(1)-1 position(2)-1 boxes(i,1)+1 boxes(i,2)+1],'Curvature',0.1)
-                end
-    %             imagesc(Truck)
-                position(1) = position(1) + boxes(i,1)+1;
-
             end
+            
+            [~,n] = find(Truck(position(1):position(1)+boxes(i,1),:));
+            if isempty(n)
+                position(2) = 1;
+            else
+                position(2) = max(n)+1;
+            end
+
+            Truck(position(1):position(1)+boxes(i,1),position(2):position(2)+boxes(i,2)) = 1;
+            if plot~=0
+                rectangle('Position',[position(1)-1 position(2)-1 boxes(i,1)+1 boxes(i,2)+1],'Curvature',0.1)
+            end
+%             imagesc(Truck)
+            position(1) = position(1) + boxes(i,1)+1;
+
         end
         [~,n] = find(Truck);
         Ea = max(n)*W;
