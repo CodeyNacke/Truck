@@ -1,0 +1,126 @@
+%Codey Nacke
+
+close all
+
+global L N W
+L = 100; %Max size of generated boxes
+N = 20; %Number of generated boxes
+W = 1000; %Width of truck
+limit = 1; %Lower temperature limit
+schedule = 0.9; %Proportion of new temp to old one
+
+
+
+
+boxes = randi([20,L],N,2);  %Initial configuration
+V = volume(boxes(:,:,end)); %Initializing temp
+
+%{
+startingD = V; %Stating temp
+index = 1;
+
+while V>1
+    boxes = boxes(:,:,end); %Every new itteration delete previous paths from structure
+    Ea = volume(boxes(:,:,end)); %Get the energy of the current path
+    Eai = Ea; %Also save as initial energy
+    rate = []; %Initialize rate array
+    equilib = 0; %Initialize terminator variable
+    while equilib ~=1
+    path_new = newPath(boxes(:,:,end)); %Generate a new path with function
+    Ea_new = volume(path_new); %Energy of new path
+    dE = Ea_new-Ea; %Change in energy
+    rate = [rate,dE]; %Update rate array
+    if dE<=0 || rand < exp(-dE/V) %Conditons to accept change
+        boxes = cat(3,boxes,path_new); %Accept the change
+        Ea = Ea_new; %Update variables
+        
+    end
+
+        if length(rate)>100 %If we have done 100 chagnes
+            %If the average change over the last 100 changes has been small
+            %or if we have reached 1000 trials
+            if mean(abs(rate(end-99:end)))<Eai/20 || length(rate)>1000
+                equilib = 1; %Terminate while loop
+            end
+        end
+    end
+    
+    %Plotting
+    %Only plot every 200th temperature (adjust for lowere schedules
+    if mod(index,200)==0
+        figure()
+        numPaths = size(boxes,3);
+        for i =1:numPaths
+            p = plot(boxes(:,1,i),boxes(:,2,i),'k'); hold on
+            p.Color(4) = max([1/numPaths,0.0025]); %For transparent lines
+            set(gcf,'color','w')
+            title(strcat('T = ',num2str(V)))
+        end
+        hold off
+    end
+    
+    V = V*schedule %Update the temp and also display it for progress stats
+    index = index+1;
+end
+
+%Compare statistics
+fprintf('The starting distance is %.4f\n',startingD)
+fprintf('The ending distance is %.4f\n',Ea)
+%}
+
+%Get the energy by finding the distance between all the points
+function Ea = volume(boxes)
+    figure(1)
+    global W L N
+    Truck = zeros(W,L*N);
+    position = [1,1];
+    for i = 1:size(boxes,1)
+        if (position(1)+boxes(i,1)) <= W
+            [n,~] = find(Truck(:,position(1):position(1)+boxes(i,1)));
+            if isempty(n)
+                position(2) = 1;
+            else
+                position(2) = max(n);
+            end
+            
+            if position(2)~= 1
+                disp(n)
+            end
+            
+            Truck(position(1):position(1)+boxes(i,1),position(2):position(2)+boxes(i,2)) = 1;
+            rectangle('Position',[position(1) position(2) boxes(i,1) boxes(i,2)],'Curvature',0.5)
+            position(1) = position(1) + boxes(i,1);
+            
+        else
+            position(1) = 1;
+            [n,~] = find(Truck(:,position(1):position(1)+boxes(i,1)));
+            if isempty(n)
+                position(2) = 1;
+            else
+                position(2) = max(n);
+            end
+            Truck(position(1):position(1)+boxes(i,1),position(2):position(2)+boxes(i,2)) = 1;
+            rectangle('Position',[position(1) position(2) boxes(i,1) boxes(i,2)],'Curvature',0.5)
+            position(1) = position(1) + boxes(i,1);
+            
+        end
+        drawnow
+        pause(0.2)
+    end
+    Ea = max(Truck,[],2)*W;
+end
+
+%New path by rversing the order of a random sequence
+function boxes = newPath(boxes)
+    M = length(boxes);
+    i = randi(M);
+    j = randi(M);
+    boxes(i:j,:) = flipud(boxes(i:j,:));  
+end
+
+
+
+
+
+
+
